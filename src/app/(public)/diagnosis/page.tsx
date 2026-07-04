@@ -6,6 +6,7 @@ import { CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card, CardBody } from "@/components/ui/Card";
 import { Input, Label, Select } from "@/components/ui/Input";
+import { submitDiagnosis } from "@/lib/leads";
 
 const industries = [
   "整体・整骨院",
@@ -29,6 +30,8 @@ const concerns = [
 
 export default function DiagnosisPage() {
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [checked, setChecked] = useState<string[]>([]);
 
   function toggleConcern(concern: string) {
@@ -80,9 +83,30 @@ export default function DiagnosisPage() {
           <CardBody>
             <form
               className="space-y-5"
-              onSubmit={(event) => {
+              onSubmit={async (event) => {
                 event.preventDefault();
-                setSubmitted(true);
+                setSubmitting(true);
+                setSubmitError(null);
+                const form = event.currentTarget;
+                const value = (name: string) =>
+                  (form.elements.namedItem(name) as HTMLInputElement | null)
+                    ?.value ?? "";
+                const result = await submitDiagnosis({
+                  storeName: value("storeName"),
+                  industry: value("industry"),
+                  googleProfileUrl: value("profileUrl"),
+                  managerName: value("managerName"),
+                  email: value("email"),
+                  concerns: checked,
+                });
+                setSubmitting(false);
+                if (result.success) {
+                  setSubmitted(true);
+                } else {
+                  setSubmitError(
+                    "送信に失敗しました。時間をおいて再度お試しください。",
+                  );
+                }
               }}
             >
               <div>
@@ -148,8 +172,18 @@ export default function DiagnosisPage() {
                   ))}
                 </div>
               </div>
-              <Button type="submit" size="lg" className="w-full">
-                無料診断を申し込む
+              {submitError && (
+                <p className="rounded-lg bg-danger/10 px-4 py-3 text-sm text-danger">
+                  {submitError}
+                </p>
+              )}
+              <Button
+                type="submit"
+                size="lg"
+                className="w-full"
+                disabled={submitting}
+              >
+                {submitting ? "送信中..." : "無料診断を申し込む"}
               </Button>
               <p className="text-center text-xs text-text-sub">
                 送信いただいた情報は診断のご連絡のみに使用します。
